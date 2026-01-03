@@ -40,7 +40,7 @@ def clean_ca_tracts():
 
     # Export to GeoJSON
     gdf.to_file(
-        os.path.join(clean_dir, "ca_tracts.geojson"),
+        os.path.join(clean_dir, "alameda_tracts.geojson"),
         driver="GeoJSON",
         index=False
     )
@@ -60,4 +60,5 @@ def clean_berkeley_boundary():
         index=False
     )
 
-clean_berkeley_boundary()
+
+clean_ca_tracts()
