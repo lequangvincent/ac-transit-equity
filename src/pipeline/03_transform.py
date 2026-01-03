@@ -63,5 +63,3 @@ def berkeley_stops():
     utils.export_clean(berkeley_stops, "berkeley_stops.geojson")
 
 
-
-berkeley_stops()
