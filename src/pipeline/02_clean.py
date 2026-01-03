@@ -5,6 +5,9 @@ import os
 raw_dir = "../../data/raw"
 clean_dir = "../../data/clean"
 
+# North American CRS (project to this for spatial joins)
+na_crs = 4269
+
 
 def clean_ca_tracts():
     # Load data
@@ -51,7 +54,7 @@ def clean_berkeley_boundary():
     gdf = gpd.read_file(utils.raw_dir("Land_Boundary_20251109.geojson"))
 
     # Reproject CRS to
-    gdf = gdf.to_crs(epsg=4269)
+    gdf = gdf.to_crs(epsg=na_crs)
 
     # Export to GeoJSON
     gdf.to_file(
@@ -90,10 +93,11 @@ def clean_ac_stops():
     assert str(gdf["routes"].dtype) == "string"
     assert str(gdf["geometry"].dtype) == "geometry"
 
-    # Convert routes string to list of routes
-    gdf["routes"] = gdf["routes"].str.split(" ")
+    # Reproject to the correct
+    gdf = gdf.to_crs(epsg=na_crs)
 
     # Export cleaned
     utils.export_clean(gdf, "ac_stops.geojson")
+
 
 clean_ac_stops()

@@ -36,3 +36,32 @@ def berkeley_tracts():
 
     # Export berkeley_tracts
     utils.export_clean(berkeley_tracts, "berkeley_tracts.geojson")
+
+
+def berkeley_stops():
+    # Load data
+    ac_stops = gpd.read_file(utils.clean_dir("ac_stops.geojson"))
+    berkeley_tracts = gpd.read_file(utils.clean_dir("berkeley_tracts.geojson"))
+
+    assert ac_stops.crs == berkeley_tracts.crs
+
+    # Spatial join to filter for berkeley bus stops
+    berkeley_stops = gpd.sjoin(
+        ac_stops,
+        berkeley_tracts,
+        how="inner",
+        predicate="intersects"
+    )
+
+    # Drop index right column
+    berkeley_stops = berkeley_stops.drop("index_right", axis=1)
+
+    # Reset index
+    berkeley_stops = berkeley_stops.reset_index(drop=True)
+
+    # Export berkeley bus stops
+    utils.export_clean(berkeley_stops, "berkeley_stops.geojson")
+
+
+
+berkeley_stops()
