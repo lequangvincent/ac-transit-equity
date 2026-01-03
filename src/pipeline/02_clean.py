@@ -45,12 +45,12 @@ def clean_ca_tracts():
     # Reset index
     gdf = gdf.reset_index(drop=True)
 
+    # Assert valid geometries
+    assert gdf.is_valid.all()
+
     # Assert CRS by default is Census NAD83 (EPSG:4269)
     assert gdf.crs is not None
     assert gdf.crs.to_epsg() == na_crs
-
-    # Assert valid geometries
-    assert gdf.is_valid.all()
 
     # Export to GeoJSON
     utils.export_clean(gdf, "alameda_tracts.geojson")
@@ -126,6 +126,46 @@ def clean_ac_stops():
     utils.export_clean(gdf, "ac_stops.geojson")
 
 
+def clean_ca_block_population():
+
+    # Load Data
+    gdf = gpd.read_file(
+        utils.raw_dir("tl_2020_06_tabblock20.zip")
+    )
+
+    # Rename columns
+    gdf = gdf.rename(columns={
+        "TRACTCE20": "tract",
+        "POP20": "population",
+    })
+
+    # Select relevant columns
+    gdf = gdf[["tract", "population", "geometry"]]
+
+    # Convert datatypes
+    gdf["tract"] = gdf["tract"].astype("string")
+    gdf["population"] = gdf["population"].astype("Int64")
+
+    # Assert datatypes
+    assert str(gdf["tract"].dtype) == "string"
+    assert str(gdf["population"].dtype) == "Int64"
+    assert str(gdf["geometry"].dtype) == "geometry"
+
+    # Assert summed pop equals actual census pop in 2020
+    assert gdf["population"].sum() == 39538223
+
+    # Assert valid geometry
+    assert gdf.is_valid.all()
+
+    # Assert CRS by default is Census NAD83 (EPSG:4269)
+    assert gdf.crs is not None
+    assert gdf.crs.to_epsg() == na_crs
+
+    # Export cleaned
+    utils.export_clean(gdf, "ca_block_population.geojson")
+
+
 clean_ca_tracts()
 clean_berkeley_boundary()
 clean_ac_stops()
+clean_ca_block_population()
