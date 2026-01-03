@@ -10,8 +10,8 @@ def clean_dir(filename):
     return os.path.join("../../data/clean", filename)
 
 def export_clean(gdf, filename):
-    # Assert input is a geodataframe
 
+    # Assert input is a geodataframe
     assert isinstance(gdf, gpd.GeoDataFrame)
 
     gdf.to_file(

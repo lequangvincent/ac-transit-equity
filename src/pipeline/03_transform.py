@@ -141,11 +141,11 @@ def generate_coverage():
         utils.clean_dir("berkeley_boundary.geojson")
     )
 
+    # Assert CRS
+    assert coverage.crs == berkeley_boundary.crs == 4269
+
     # Clip polygon to the Berkeley land boundary
     coverage = gpd.clip(coverage, berkeley_boundary)
-
-    # Assert CRS
-    assert coverage.crs.to_epsg() == 4269
 
     # Export coverage polygon
     utils.export_clean(coverage, "coverage.geojson")
