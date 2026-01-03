@@ -151,6 +151,9 @@ def clean_ca_block_population():
     assert str(gdf["population"].dtype) == "Int64"
     assert str(gdf["geometry"].dtype) == "geometry"
 
+    # Assert no missing population
+    assert gdf["population"].isna().sum() == 0
+
     # Assert summed pop equals actual census pop in 2020
     assert gdf["population"].sum() == 39538223
 

@@ -151,6 +151,37 @@ def generate_coverage():
     utils.export_clean(coverage, "coverage.geojson")
 
 
+def berkeley_block_pop():
+
+    # Load data
+    ca_block_population = gpd.read_file(
+        utils.clean_dir("ca_block_population.geojson")
+    )
+    berkeley_tracts = gpd.read_file(
+        utils.clean_dir("berkeley_tracts.geojson")
+    )
+
+    # Convert datatypes
+    ca_block_population = ca_block_population.convert_dtypes()
+    berkeley_tracts = berkeley_tracts.convert_dtypes()
+
+    # Assert datatypes
+    assert str(ca_block_population["tract"].dtype) == "string"
+    assert str(berkeley_tracts["tract"].dtype) == "string"
+
+    # Filter blocks by Berkeley tracts
+    berkeley_block_population = ca_block_population[
+        ca_block_population["tract"].isin(berkeley_tracts["tract"])
+    ]
+
+    # Assert summed pop equals actual census pop in 2020
+    assert berkeley_block_population["population"].sum() == 124321
+
+    # Export coverage polygon
+    utils.export_clean(berkeley_block_population, "berkeley_block_pop.geojson")
+
+
 berkeley_tracts()
 berkeley_stops()
 generate_coverage()
+berkeley_block_pop()
