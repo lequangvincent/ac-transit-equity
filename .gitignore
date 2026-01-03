@@ -3,3 +3,4 @@
 .venv
 data
 src/pipeline/__pycache__
+src/pipeline/cache

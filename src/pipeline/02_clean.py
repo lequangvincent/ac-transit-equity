@@ -13,9 +13,6 @@ def clean_ca_tracts():
         utils.raw_dir("2024_06_tract.zip")
     )
 
-    # Assert data not empty
-    assert not gdf.empty
-
     # Rename columns
     gdf = gdf.rename(columns={
         "COUNTYFP": "county",
@@ -24,6 +21,9 @@ def clean_ca_tracts():
 
     # Drop missing values
     gdf = gdf.dropna(subset=["county", "tract", "geometry"])
+
+    # Assert data not empty
+    assert not gdf.empty
 
     # Convert datatypes
     gdf = gdf.convert_dtypes()
