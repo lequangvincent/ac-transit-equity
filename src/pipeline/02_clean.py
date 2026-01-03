@@ -24,7 +24,7 @@ def clean_ca_tracts():
     assert str(gdf["geometry"].dtype) == "geometry"
 
     # Assert TRACTCE (primary key) has no duplicates
-    assert gdf["TRACTCE"].unique() == len(gdf)
+    assert len(gdf["TRACTCE"].unique()) == len(gdf)
 
     # Filter Alameda tracts
     gdf = gdf[gdf["COUNTYFP"] == "001"]
@@ -61,4 +61,39 @@ def clean_berkeley_boundary():
     )
 
 
-clean_ca_tracts()
+def clean_ac_stops():
+    # Load data
+    gdf = gpd.read_file(
+        utils.raw_dir("UniqueStops_Fall25.zip")
+    )
+
+    # Select relevant columns
+    gdf = gdf[["stp_511_id", "route", "geometry"]]
+
+    # Rename columns
+    gdf = gdf.rename(columns={
+        "stp_511_id": "stop_id",
+        "route": "routes"
+    })
+
+    # Drop missing data
+    gdf = gdf.dropna()
+
+    # Assert that each stop is unique
+    assert len(gdf["stop_id"].unique()) == len(gdf)
+
+    # Convert datatypes
+    gdf[["stop_id", "routes"]] = gdf[["stop_id", "routes"]].astype("string")
+
+    # Assert dtypes
+    assert str(gdf["stop_id"].dtype) == "string"
+    assert str(gdf["routes"].dtype) == "string"
+    assert str(gdf["geometry"].dtype) == "geometry"
+
+    # Convert routes string to list of routes
+    gdf["routes"] = gdf["routes"].str.split(" ")
+
+    # Export cleaned
+    utils.export_clean(gdf, "ac_stops.geojson")
+
+clean_ac_stops()
