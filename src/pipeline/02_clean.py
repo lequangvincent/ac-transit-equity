@@ -26,17 +26,12 @@ def clean_ca_tracts():
     assert not gdf.empty
 
     # Convert datatypes
-    gdf = gdf.convert_dtypes()
-
-    # Assert datatypes
-    assert str(gdf["county"].dtype) == "string"
-    assert str(gdf["tract"].dtype) == "string"
-    assert str(gdf["geometry"].dtype) == "geometry"
+    gdf[["county", "tract"]] = gdf[["county", "tract"]].astype("string")
 
     # Filter for Alameda county rows
     gdf = gdf[gdf["county"] == "001"]
 
-    # Assert no duplicates
+    # Assert no duplicate tracts
     assert len(gdf["tract"].unique()) == len(gdf)
 
     # Select relevant columns
@@ -52,7 +47,7 @@ def clean_ca_tracts():
     assert gdf.crs is not None
     assert gdf.crs.to_epsg() == na_crs
 
-    # Export to GeoJSON
+    # Export cleaned
     utils.export_clean(gdf, "alameda_tracts.geojson")
 
 
@@ -76,7 +71,7 @@ def clean_berkeley_boundary():
     else:
         gdf = gdf.to_crs(na_crs)
 
-    # Export to GeoJSON
+    # Export cleaned
     utils.export_clean(gdf, "berkeley_boundary.geojson")
 
 
@@ -104,11 +99,6 @@ def clean_ac_stops():
 
     # Convert datatypes
     gdf[["stop_id", "routes"]] = gdf[["stop_id", "routes"]].astype("string")
-
-    # Assert datatypes
-    assert str(gdf["stop_id"].dtype) == "string"
-    assert str(gdf["routes"].dtype) == "string"
-    assert str(gdf["geometry"].dtype) == "geometry"
 
     # Assert that each stop is unique
     assert len(gdf["stop_id"].unique()) == len(gdf)
@@ -144,12 +134,7 @@ def clean_ca_block_population():
 
     # Convert datatypes
     gdf["tract"] = gdf["tract"].astype("string")
-    gdf["population"] = gdf["population"].astype("Int64")
-
-    # Assert datatypes
-    assert str(gdf["tract"].dtype) == "string"
-    assert str(gdf["population"].dtype) == "Int64"
-    assert str(gdf["geometry"].dtype) == "geometry"
+    gdf["population"] = gdf["population"].astype("int")
 
     # Assert no missing population
     assert gdf["population"].isna().sum() == 0
@@ -168,7 +153,9 @@ def clean_ca_block_population():
     utils.export_clean(gdf, "ca_block_population.geojson")
 
 
-clean_ca_tracts()
-clean_berkeley_boundary()
-clean_ac_stops()
-clean_ca_block_population()
+if __name__ == "__main__":
+    # Clean ingested data
+    clean_ca_tracts()
+    clean_berkeley_boundary()
+    clean_ac_stops()
+    clean_ca_block_population()

@@ -38,7 +38,6 @@ def ingest_schedule():
 
     raw = response.json()
 
-
     today = date.today().isoformat()
     filename = f"schedule_{today}.json"
 
@@ -46,8 +45,14 @@ def ingest_schedule():
         json.dump(raw, json_file, indent=4)
 
 
-# output_dir = "../data/raw"
-# os.makedirs(output_dir, exist_ok=True)
 if __name__ == "__main__":
+
+    # Create directories
+    output_dir = "../data/raw"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Load .env file
     load_dotenv(dotenv_path="../../.env")
+
+    # Ingest data
     ingest_schedule()

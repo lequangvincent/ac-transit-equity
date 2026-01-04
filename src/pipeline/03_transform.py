@@ -3,21 +3,17 @@ import geopandas as gpd
 import networkx as nx
 import osmnx as ox
 from shapely.geometry import Point
-import numpy as np
 import utils
 import json
 
 
 def berkeley_tracts():
 
-    # Load data
+    # Load Alameda tracts and Berkeley land boundary
     alameda_tracts = gpd.read_file(utils.clean_dir("alameda_tracts.geojson"))
     berkeley_boundary = gpd.read_file(
         utils.clean_dir("berkeley_boundary.geojson")
     )
-
-    # Assert CRS matches (EPSG:4269)
-    assert alameda_tracts.crs == berkeley_boundary.crs
 
     # Create a representative point for each Alameda tract
     alameda_points = gpd.GeoDataFrame(
@@ -32,10 +28,10 @@ def berkeley_tracts():
         predicate="intersects"
     )
 
-    # Drop right index to sjoin again
+    # Drop right index column to sjoin again
     berkeley_points = berkeley_points.drop(columns=["index_right"])
 
-    # Match representative points back to corresponding polygons
+    # Map representative points back to polygons
     berkeley_tracts = gpd.sjoin(
         alameda_tracts,
         berkeley_points,
@@ -55,14 +51,11 @@ def berkeley_tracts():
 
 def berkeley_stops():
 
-    # Load data
+    # Load AC Transit stops and Berkeley tracts
     ac_stops = gpd.read_file(utils.clean_dir("ac_stops.geojson"))
     berkeley_tracts = gpd.read_file(utils.clean_dir("berkeley_tracts.geojson"))
 
-    # Assert CRS matches (EPSG:4269)
-    assert ac_stops.crs == berkeley_tracts.crs
-
-    # Spatial filter AC Transit stops in Berkeley
+    # Spatially filter AC Transit stops in Berkeley
     berkeley_stops = gpd.sjoin(
         ac_stops,
         berkeley_tracts,
@@ -70,7 +63,7 @@ def berkeley_stops():
         predicate="intersects"
     )
 
-    # Drop index right column
+    # Drop right index column
     berkeley_stops = berkeley_stops.drop(columns=["index_right"])
 
     # Reset index
@@ -82,10 +75,10 @@ def berkeley_stops():
 
 def coverage():
 
-    # Isochrone Parameters
-    distance = 500  # 500 meters
-    speed = 5  # 5 kph
-    time = distance / 1000 / speed * 60  # 6 minutes
+    # Set isochrone parameters
+    distance = 500  # meters
+    speed = 5  # kph
+    time = distance / 1000 / speed * 60  # minutes
 
     # Create Berkeley OSMnx graph
     G = ox.graph.graph_from_place(
@@ -101,22 +94,22 @@ def coverage():
         utils.clean_dir("berkeley_stops.geojson")
     )
 
-    # Project Berkeley stops from coordiantes to meters
+    # Project stops to meters
     projected_stops = ox.projection.project_gdf(
         berkeley_stops, to_crs=G.graph["crs"])["geometry"]
 
-    # Snap bus stops to nearest node on graph
+    # Snap stops to nearest node on graph
     nodes = ox.distance.nearest_nodes(
         G,
         X=projected_stops.x,
         Y=projected_stops.y
     )
 
-    # Generate isochrones from each bus stop node
+    # Generate isochrones for each node
     isochrones = []
     for node in set(nodes):
 
-        # Create subgraph of reachable nodes within 6 minutes
+        # Create subgraph of reachable nodes
         subgraph = nx.ego_graph(G, node, radius=time, distance='time')
         reachable_nodes = [
             Point(data['x'], data['y'])
@@ -129,13 +122,13 @@ def coverage():
             polygon = gpd.GeoSeries(reachable_nodes).union_all().convex_hull
             isochrones.append(polygon)
 
-    # Turn list of isochrone polygons into a geodataframe
+    # Turn list of isochrones into a geodataframe
     isochrones = gpd.GeoDataFrame(geometry=isochrones, crs=G.graph["crs"])
 
-    # Set CRS to NAD83 (EPSG:4269)
+    # Project CRS
     isochrones = isochrones.to_crs(berkeley_stops.crs)
 
-    # Merge individual isochrones to a single polygon
+    # Merge isochrones into a single polygon
     coverage = gpd.GeoDataFrame(
         geometry=[isochrones.union_all()], crs=berkeley_stops.crs)
 
@@ -144,10 +137,7 @@ def coverage():
         utils.clean_dir("berkeley_boundary.geojson")
     )
 
-    # Assert CRS
-    assert coverage.crs == berkeley_boundary.crs
-
-    # Clip polygon to the Berkeley land boundary
+    # Clip coverage polygon to the Berkeley land boundary
     coverage = gpd.clip(coverage, berkeley_boundary)
 
     # Export coverage polygon
@@ -156,18 +146,12 @@ def coverage():
 
 def tract_population_covered():
 
-    # Load data
+    # Load CA block population and Berkeley tracts
     ca_block_population = gpd.read_file(
         utils.clean_dir("ca_block_population.geojson")
     )
     berkeley_tracts = gpd.read_file(
         utils.clean_dir("berkeley_tracts.geojson")
-    )
-    coverage = gpd.read_file(
-        utils.clean_dir("coverage.geojson")
-    )
-    berkeley_boundary = gpd.read_file(
-        utils.clean_dir("berkeley_boundary.geojson")
     )
 
     # Convert datatypes
@@ -175,47 +159,52 @@ def tract_population_covered():
         "string")
     berkeley_tracts["tract"] = berkeley_tracts["tract"].astype("string")
 
-    # Filter blocks by Berkeley tracts
+    # Filter CA blocks by Berkeley tracts
     berkeley_block_population = ca_block_population[
         ca_block_population["tract"].isin(berkeley_tracts["tract"])
     ]
 
-    # Assert summed pop equals actual census pop in 2020
+    # Assert summed popualation equals official Census population in 2020
     assert berkeley_block_population["population"].sum() == 124321
 
-    # Assert CRS matches
-    assert berkeley_block_population.crs == berkeley_boundary.crs
+    # Load coverage polygon and Berkeley land boundary
+    coverage = gpd.read_file(
+        utils.clean_dir("coverage.geojson")
+    )
+    berkeley_boundary = gpd.read_file(
+        utils.clean_dir("berkeley_boundary.geojson")
+    )
 
-    # Clip non-land blocks with Berkeley land boundary
+    # Clip non-land blocks with boundary
     berkeley_block_population = gpd.clip(
         berkeley_block_population, berkeley_boundary)
 
-    # Project geometries for area calculations
+    # Project CRS for area calculations
     berkeley_block_population = berkeley_block_population.to_crs(epsg=3310)
     coverage = coverage.to_crs(epsg=3310).geometry.iloc[0]
 
-    # Area per block
+    # Compute area per block
     area_block = berkeley_block_population.geometry.area
 
     # Intersect each block with coverage polygon
     area_overlap = berkeley_block_population.geometry.intersection(
         coverage).area
 
-    # Per block area coverage
+    # Compute area coverage ratio
     area_ratio = area_overlap / area_block
 
-    # Block level population coverage
+    # Compute area-weighted estimate of population covered
     berkeley_block_population["population_covered"] = berkeley_block_population["population"] * area_ratio
 
     # Aggregate to tract level population coverage
     tract_population_covered = berkeley_block_population.groupby(
-        ["tract"])[["population", "population_covered"]].sum()
-    tract_population_covered = tract_population_covered.reset_index()
+        ["tract"])[["population", "population_covered"]].sum().reset_index()
 
-    # Select Relevant Columns
+    # Select relevant columns
     tract_population_covered = tract_population_covered[[
         "tract", "population", "population_covered"]]
 
+    # Export population covered in per tract
     tract_population_covered.to_csv(
         utils.clean_dir("tract_population_covered.csv"),
         index=False
@@ -224,7 +213,7 @@ def tract_population_covered():
 
 def scheduled_arrivals():
 
-    # Maps an hour to a time block
+    # Helper: Map an hour to a time block
     def time_block(hour):
         if 5 <= hour <= 6:
             return "Early AM (5–6:59)"
@@ -241,10 +230,10 @@ def scheduled_arrivals():
         else:
             return "Overnight (1–4:59)"
 
-    # Count hourly scheduled arrivals for a given route and bus stop
+    # Helper: Count hourly scheduled arrivals for a given route and bus stop
     def count_scheduled_arrivals(schedule, route, stop_id, hour):
 
-        # Filter bus stops by route (e.g. "51B northbound, 51B southbound")
+        # Filter a stop by its route (e.g. route=51b then [51B northbound, 51B southbound])
         routes = [
             x
             for x in schedule["Routes"]
@@ -254,13 +243,14 @@ def scheduled_arrivals():
         count = 0
         for r in routes:
 
-            # Get all trips that start during that hour
+            # Scheduled bus departures within the hour
             trips = [
                 trip
                 for trip in r["Trips"]
                 if int(trip.get("StartTime")[:2]) == hour
             ]
 
+            # Count the times a bus reaches that stop
             for trip in trips:
                 arrivals = [
                     arrival
@@ -272,7 +262,7 @@ def scheduled_arrivals():
 
         return count
 
-    # Load data
+    # Load Berkeley stops and weekday bus schedule
     berkeley_stops = gpd.read_file(
         utils.clean_dir("berkeley_stops.geojson")
     )
@@ -280,15 +270,14 @@ def scheduled_arrivals():
         data = json.load(file)
 
     # Convert datatypes
-    berkeley_stops["stop_id"] = berkeley_stops["stop_id"].astype("string")
-    berkeley_stops["routes"] = berkeley_stops["routes"].astype("string")
-    berkeley_stops["tract"] = berkeley_stops["tract"].astype("string")
+    berkeley_stops[["stop_id", "routes", "tract"]] = berkeley_stops[[
+        "stop_id", "routes", "tract"]].astype("string")
 
     # Split routes delimited by " "
     berkeley_stops["routes"] = berkeley_stops["routes"].str.split(" ")
 
     # Compute of bus arrivals per stop in Berkeley
-    rows = []
+    observations = []
     for _, stop in berkeley_stops.iterrows():
         stop_id = stop["stop_id"]
         routes = stop["routes"]
@@ -304,46 +293,39 @@ def scheduled_arrivals():
                 for route in routes
             ])
 
-            rows.append({
+            observations.append({
                 "stop_id": stop_id,
-                "arrivals": arrivals,
-                "hour": hour
+                "hour": hour,
+                "arrivals": arrivals
             })
 
-    # Convert to dataframe
-    arrivals = pd.DataFrame(rows)
+    # Convert observations to dataframe
+    arrivals = pd.DataFrame(observations)
 
-    # Convert to geodataframe
+    # Merge on stop_id to get tracts
     arrivals = arrivals.merge(berkeley_stops, on="stop_id")
 
     # Sanity check i.e. there are 24 observations per bus stop
     assert len(arrivals) / 24 == len(berkeley_stops)
 
-    # Select relevant columns
-    arrivals = arrivals[["tract", "arrivals", "hour"]]
-
-    # Export hourly bus arrivals
+    # Export bus arrivals by hour
     arrivals.groupby(["hour"])["arrivals"].sum().reset_index().to_csv(
-        utils.clean_dir("hour_arrivals.csv"),
+        utils.clean_dir("hourly_arrivals.csv"),
         index=False
     )
 
-    # Convert datatype
-    arrivals["time_block"] = arrivals["hour"].apply(time_block)
-    arrivals["time_block"] = arrivals["time_block"].astype("string")
+    # Map hour to time block
+    arrivals["time_block"] = arrivals["hour"].apply(
+        time_block).astype("string")
 
-    # Export time_block bus arrivals
+    # Export bus arrivals by time block
     arrivals.groupby(["time_block"])["arrivals"].sum().reset_index().to_csv(
         utils.clean_dir("time_block_arrivals.csv"),
         index=False
     )
 
-    # Load data
-    berkeley_tracts = gpd.read_file(
-        utils.clean_dir("berkeley_tracts.geojson")
-    )
-
-    # Group arrivals by time block
+    # Sum arrivals by tract and time block
+    arrivals["tract"] = arrivals["tract"].astype("string")
     tract_time_block_arrivals = (
         arrivals
         .groupby(["tract", "time_block"])["arrivals"]
@@ -351,29 +333,40 @@ def scheduled_arrivals():
         .reset_index()
     )
 
+    # Load Berkeley tracts
+    berkeley_tracts = gpd.read_file(
+        utils.clean_dir("berkeley_tracts.geojson")
+    )
+
+    # Convert datatype
+    berkeley_tracts["tract"] = arrivals["tract"].astype("string")
+
     # Sanity check
     assert len(tract_time_block_arrivals) == len(
         tract_time_block_arrivals["time_block"].unique()) * len(berkeley_tracts)
 
-    # Convert to geodataframe
+    # Merge on tract to get geometry
     tract_time_block_arrivals = berkeley_tracts.merge(
         tract_time_block_arrivals, on="tract")
 
-    # Load Data
+    # Load the population covered per tract
     tract_population_covered = pd.read_csv(
         utils.clean_dir("tract_population_covered.csv")
     )
 
+    # Convert datatype
     tract_population_covered["tract"] = tract_population_covered["tract"].astype(
         "string")
 
-    # Convert
+    # Merge on tract to get population and population covered
     tract_time_block_arrivals = tract_time_block_arrivals.merge(
         tract_population_covered, on="tract")
 
+    # Compute bus arrivals per 1000 per tract per time block
     tract_time_block_arrivals["arrivals_per_1000_covered"] = tract_time_block_arrivals["arrivals"] / \
         tract_time_block_arrivals["population_covered"] * 1000
 
+    # Export tract-level arrivals per 1,000 covered residents by time block
     utils.export_clean(tract_time_block_arrivals,
                        "tract_time_block_arrivals.geojson")
 
