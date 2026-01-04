@@ -1,8 +1,8 @@
+from shapely.geometry import Point
 import pandas as pd
 import geopandas as gpd
 import networkx as nx
 import osmnx as ox
-from shapely.geometry import Point
 import utils
 import json
 
@@ -339,7 +339,7 @@ def scheduled_arrivals():
     )
 
     # Convert datatype
-    berkeley_tracts["tract"] = arrivals["tract"].astype("string")
+    berkeley_tracts["tract"] = berkeley_tracts["tract"].astype("string")
 
     # Sanity check
     assert len(tract_time_block_arrivals) == len(
@@ -372,8 +372,8 @@ def scheduled_arrivals():
 
 
 if __name__ == "__main__":
-    berkeley_tracts()
-    berkeley_stops()
-    coverage()
-    tract_population_covered()
+    # berkeley_tracts()
+    # berkeley_stops()
+    # coverage()
+    # tract_population_covered()
     scheduled_arrivals()

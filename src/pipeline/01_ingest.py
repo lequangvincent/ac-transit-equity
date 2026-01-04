@@ -1,10 +1,10 @@
-import geopandas as gpd
 from dotenv import load_dotenv
-import utils
-import os
-import requests
-import json
 from datetime import date
+import geopandas as gpd
+import requests
+import utils
+import json
+import os
 
 
 def ingest_berkeley_boundary():
