@@ -23,6 +23,8 @@ def population_coverage_ratio():
         f"Population Coverage Ratio: {coverage_ratio}%\n\n"
     )
 
+def main():
+    population_coverage_ratio()
 
 if __name__ == "__main__":
-    population_coverage_ratio()
+    main()

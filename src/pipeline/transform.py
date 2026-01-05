@@ -230,6 +230,16 @@ def scheduled_arrivals():
         else:
             return "Overnight (1–4:59)"
 
+    time_block_duration = {
+        "Early AM (5–6:59)": 2,
+        "AM Peak (7–9:59)": 3,
+        "Midday (10–14:59)": 5,
+        "PM Peak (15–18:59)": 4,
+        "Evening (19–21:59)": 3,
+        "Late Night (22–0:59)": 3,
+        "Overnight (1–4:59)": 4,
+    }
+
     # Helper: Count hourly scheduled arrivals for a given route and bus stop
     def count_scheduled_arrivals(schedule, route, stop_id, hour):
 
@@ -318,8 +328,19 @@ def scheduled_arrivals():
     arrivals["time_block"] = arrivals["hour"].apply(
         time_block).astype("string")
 
+    temp = arrivals.copy()
+
     # Export bus arrivals by time block
-    arrivals.groupby(["time_block"])["arrivals"].sum().reset_index().to_csv(
+    temp = temp.groupby(["time_block"])["arrivals"].sum().reset_index()
+
+    temp["time_block_duration"] = temp["time_block"].map(
+        time_block_duration)
+    temp["average_arrivals"] = temp["arrivals"] / \
+        temp["time_block_duration"]
+    temp["average_arrivals"].drop(
+        columns=["time_block_duration"])
+
+    temp.to_csv(
         utils.clean_dir("time_block_arrivals.csv"),
         index=False
     )
@@ -354,6 +375,13 @@ def scheduled_arrivals():
         utils.clean_dir("tract_population_covered.csv")
     )
 
+    tract_time_block_arrivals["time_block_duration"] = tract_time_block_arrivals["time_block"].map(
+        time_block_duration)
+    tract_time_block_arrivals["average_arrivals"] = tract_time_block_arrivals["arrivals"] / \
+        tract_time_block_arrivals["time_block_duration"]
+    tract_time_block_arrivals["average_arrivals"].drop(
+        columns=["time_block_duration"])
+
     # Convert datatype
     tract_population_covered["tract"] = tract_population_covered["tract"].astype(
         "string")
@@ -363,7 +391,7 @@ def scheduled_arrivals():
         tract_population_covered, on="tract")
 
     # Compute bus arrivals per 1000 per tract per time block
-    tract_time_block_arrivals["arrivals_per_1000_covered"] = tract_time_block_arrivals["arrivals"] / \
+    tract_time_block_arrivals["average_arrivals_per_1000_covered"] = tract_time_block_arrivals["average_arrivals"] / \
         tract_time_block_arrivals["population_covered"] * 1000
 
     # Export tract-level arrivals per 1,000 covered residents by time block
@@ -406,7 +434,7 @@ def tract_midday_arrivals():
     outliers = tract_midday_arrivals[(tract_midday_arrivals["arrivals_per_1000_covered"] < lower_bound) |
                                      (tract_midday_arrivals["arrivals_per_1000_covered"] > upper_bound)]
 
-    # print(outliers)
+    print(outliers)
 
     filtered = tract_midday_arrivals[tract_midday_arrivals["tract"] != "982100"].reset_index(
         drop=True)
@@ -458,8 +486,6 @@ def tract_midday_arrivals():
 
     print(bottom)
 
-    # notable_tracts = ["422800", "423602", "422700"]
-
     # Load college population
     college_population = pd.read_csv(
         utils.clean_dir("college_population.csv")
@@ -501,18 +527,115 @@ def tract_midday_arrivals():
     non_students = filtered[filtered["student_pop_ratio"]
                             <= 50].reset_index(drop=True)
 
-    utils.export_clean(
-        utils.clean_dir("midday_students.geojson")
+    # Recompute percentiles for non_students
+    q25 = non_students["arrivals_per_1000_covered"].quantile(0.25)
+    non_students["arrivals_covered_percentile"] = (
+        non_students["arrivals_per_1000_covered"]
+        .le(q25)
+        .map({True: "Bottom 25%", False: "Top 75%"})
     )
 
-    utils.export_clean(
-        utils.clean_dir("midday_non_students.geojson")
+    # Recompute percentiles for non_student dataset
+    q75 = non_students["%_no_vehicle_households"].quantile(
+        0.75)
+    non_students["no_vehicle_percentile"] = (
+        non_students["%_no_vehicle_households"]
+        .le(q75)
+        .map({False: "Bottom 25%", True: "Top 75%"})
     )
+
+    utils.export_clean(students.drop(columns=[
+                       "arrivals_covered_percentile", "no_vehicle_percentile"]), "midday_students.geojson")
+
+    utils.export_clean(non_students, "midday_non_students.geojson")
+
+
+def tract_peak_arrivals():
+
+    # Load vehicle ownership data
+    vehicle_ownership = pd.read_csv(
+        utils.clean_dir("vehicle_ownership.csv")
+    )
+
+    # Convert data types
+    vehicle_ownership["zero_vehicle_households"] = vehicle_ownership["zero_vehicle_households"].astype(
+        "float")
+    vehicle_ownership["households"] = vehicle_ownership["households"].astype(
+        "int")
+    vehicle_ownership["tract"] = vehicle_ownership["tract"].astype("string")
+
+    # Compute % zero vehicle households
+    vehicle_ownership["%_no_vehicle_households"] = vehicle_ownership["zero_vehicle_households"] / \
+        vehicle_ownership["households"] * 100
+
+    # Load tract_block_time arrivals
+    tract_time_block_arrivals = gpd.read_file(
+        utils.clean_dir("tract_time_block_arrivals.geojson")
+    )
+
+    # Convert data types
+    tract_time_block_arrivals[["tract", "time_block"]] = tract_time_block_arrivals[[
+        "tract", "time_block"]].astype("string")
+    tract_time_block_arrivals["average_arrivals"] = tract_time_block_arrivals["average_arrivals"].astype(
+        "float")
+
+    # # Filter for AM & PM peaks
+    tract_time_block_arrivals = tract_time_block_arrivals[(tract_time_block_arrivals["time_block"] == "AM Peak (7–9:59)") | (
+        tract_time_block_arrivals["time_block"] == "PM Peak (15–18:59)")]
+
+    # Groupby tract + time block and sum on the average_arrivals
+    peak_time_block_arrivals = tract_time_block_arrivals.groupby(
+        ["tract", "time_block"])[["average_arrivals"]].sum().reset_index()
+
+    # Merge zero vehicle households
+    peak_time_block_arrivals = peak_time_block_arrivals.merge(
+        vehicle_ownership, on="tract")
+
+    # Load berkeley tracts for geometry
+    berkeley_tracts = gpd.read_file(
+        utils.clean_dir("berkeley_tracts.geojson")
+    )
+
+    # Convert datatypes
+    berkeley_tracts["tract"] = berkeley_tracts["tract"].astype("string")
+
+    # Merge geometry
+    peak_time_block_arrivals = berkeley_tracts.merge(
+        peak_time_block_arrivals, on="tract")
+
+    # Load tract population
+    tract_population_covered = pd.read_csv(
+        utils.clean_dir("tract_population_covered.csv")
+    )
+
+    # Convert datatypes
+    tract_population_covered["tract"] = tract_population_covered["tract"].astype(
+        "string")
+    tract_population_covered["population_covered"] = tract_population_covered["population_covered"].astype(
+        "float")
+
+    # Merge peak time block arrivals with population covered
+    peak_time_block_arrivals = peak_time_block_arrivals.merge(
+        tract_population_covered, on="tract")
+
+    # Normalize average arrivals
+    peak_time_block_arrivals["average_arrivals_normalized"] = peak_time_block_arrivals["average_arrivals"] / \
+        peak_time_block_arrivals["population_covered"] * 1000
+
+    # Export
+    utils.export_clean(peak_time_block_arrivals,
+                       "peak_time_block_arrivals.geojson")
+
+
+def main():
+    berkeley_tracts()
+    berkeley_stops()
+    coverage()
+    tract_population_covered()
+    scheduled_arrivals()
+    # tract_midday_arrivals()
+    tract_peak_arrivals()
+
 
 if __name__ == "__main__":
-    # berkeley_tracts()
-    # berkeley_stops()
-    # coverage()
-    # tract_population_covered()
-    # scheduled_arrivals()
-    tract_midday_arrivals()
+    main()

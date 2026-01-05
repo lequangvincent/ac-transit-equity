@@ -104,8 +104,7 @@ def ingest_college_population():
     df.to_csv(utils.raw_dir(f"college_population_{today}.csv"))
 
 
-if __name__ == "__main__":
-
+def main():
     # Create directories
     output_dir = "../data/raw"
     os.makedirs(output_dir, exist_ok=True)
@@ -116,4 +115,9 @@ if __name__ == "__main__":
     # Ingest data
     # ingest_schedule()
     # ingest_vehicle_ownership()
-    ingest_college_population()
+    # ingest_college_population()
+    pass
+
+
+if __name__ == "__main__":
+    main()

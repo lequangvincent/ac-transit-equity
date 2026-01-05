@@ -207,11 +207,15 @@ def clean_college_population():
     )
 
 
-if __name__ == "__main__":
+def main():
     # Clean ingested data
-    # clean_ca_tracts()
-    # clean_berkeley_boundary()
-    # clean_ac_stops()
-    # clean_ca_block_population()
-    # clean_vehicle_ownership()
+    clean_ca_tracts()
+    clean_berkeley_boundary()
+    clean_ac_stops()
+    clean_ca_block_population()
+    clean_vehicle_ownership()
     clean_college_population()
+
+
+if __name__ == "__main__":
+    main()
