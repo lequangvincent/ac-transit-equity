@@ -388,61 +388,126 @@ def tract_midday_arrivals():
     tract_midday_arrivals = tract_time_block_arrivals[
         tract_time_block_arrivals["time_block"] == "Midday (10–14:59)"]
 
-    # Filter by bottom 25% or top 75%
-    q25 = tract_midday_arrivals["arrivals_per_1000_covered"].quantile(0.25)
-    tract_midday_arrivals["access_group"] = (
-        tract_midday_arrivals["arrivals_per_1000_covered"]
+    tract_midday_arrivals = tract_midday_arrivals.drop(
+        columns=["time_block"])
+
+    # Compute population coverage ratio
+    tract_midday_arrivals["coverage_ratio"] = tract_midday_arrivals["population_covered"] / \
+        tract_midday_arrivals["population"] * 100
+
+    # Remove outliers within this time block
+    Q1 = tract_midday_arrivals["arrivals_per_1000_covered"].quantile(0.25)
+    Q3 = tract_midday_arrivals["arrivals_per_1000_covered"].quantile(0.75)
+    IQR = Q3 - Q1
+
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+
+    outliers = tract_midday_arrivals[(tract_midday_arrivals["arrivals_per_1000_covered"] < lower_bound) |
+                                     (tract_midday_arrivals["arrivals_per_1000_covered"] > upper_bound)]
+
+    # print(outliers)
+
+    filtered = tract_midday_arrivals[tract_midday_arrivals["tract"] != "982100"].reset_index(
+        drop=True)
+
+    # Bottom 25% or top 75% arrivals per 1000 covered
+    q25 = filtered["arrivals_per_1000_covered"].quantile(0.25)
+    filtered["arrivals_covered_percentile"] = (
+        filtered["arrivals_per_1000_covered"]
         .le(q25)
         .map({True: "Bottom 25%", False: "Top 75%"})
     )
 
-    # Compute coverage ratio
-    tract_midday_arrivals["coverage_ratio"] = tract_midday_arrivals["population_covered"] / \
-        tract_midday_arrivals["population"] * 100
+    # Sort by arrivals_per_1000_covered
+    filtered = filtered.sort_values(
+        "arrivals_per_1000_covered", ascending=False).reset_index(drop=True)
 
-    # Merge household % no vehicle households to tracts
+    # Load vehicle ownership data
     vehicle_ownership = pd.read_csv(
         utils.clean_dir("vehicle_ownership.csv")
     )
+
+    # Convert data types
     vehicle_ownership["zero_vehicle_households"] = vehicle_ownership["zero_vehicle_households"].astype(
         "float")
     vehicle_ownership["households"] = vehicle_ownership["households"].astype(
         "int")
     vehicle_ownership["tract"] = vehicle_ownership["tract"].astype("string")
+
+    # Compute % zero vehicle households
     vehicle_ownership["%_no_vehicle_households"] = vehicle_ownership["zero_vehicle_households"] / \
         vehicle_ownership["households"] * 100
-    tract_midday_arrivals = tract_midday_arrivals.merge(
+
+    # Merge vechile ownership with filtered
+    filtered = filtered.merge(
         vehicle_ownership, on="tract")
 
-    # Sort by arrivals_per_1000_covered
-    tract_midday_arrivals = tract_midday_arrivals.sort_values(
-        "arrivals_per_1000_covered", ascending=False).reset_index(drop=True)
-
-    # Filter by bottom 25% or top 75%
-    q75 = tract_midday_arrivals["%_no_vehicle_households"].quantile(
+    # Bottom 25% or top 75% of % zero vehicle households
+    q75 = filtered["%_no_vehicle_households"].quantile(
         0.75)
-    tract_midday_arrivals["percentile"] = (
-        tract_midday_arrivals["%_no_vehicle_households"]
+    filtered["no_vehicle_percentile"] = (
+        filtered["%_no_vehicle_households"]
         .le(q75)
         .map({False: "Bottom 25%", True: "Top 75%"})
     )
 
-    # Reorder columns
-    tract_midday_arrivals = tract_midday_arrivals[[
+    # See who is bottom 25% in arrivals and bottom 25% in no vehicle households
+    bottom = filtered[(filtered["arrivals_covered_percentile"] == "Bottom 25%") & (
+        filtered["no_vehicle_percentile"] == "Bottom 25%")]
+
+    print(bottom)
+
+    # notable_tracts = ["422800", "423602", "422700"]
+
+    # Load college population
+    college_population = pd.read_csv(
+        utils.clean_dir("college_population.csv")
+    )
+
+    # Convert data types
+    college_population["undergrad_pop"] = college_population["undergrad_pop"].astype(
+        "int")
+    college_population["grad_pop"] = college_population["grad_pop"].astype(
+        "int")
+    college_population["tract"] = college_population["tract"].astype("string")
+
+    # Merge college population
+    filtered = filtered.merge(
+        college_population, on="tract")
+
+    # Compute ratio of student population in a tract
+    filtered["student_pop_ratio"] = (
+        filtered["grad_pop"] + filtered["undergrad_pop"]) / filtered["population"] * 100
+
+    # Select relevant columns
+    filtered = filtered[[
         "tract",
         "population",
+        "student_pop_ratio",
         "population_covered",
         "coverage_ratio",
         "arrivals",
         "arrivals_per_1000_covered",
-        "access_group",
+        "arrivals_covered_percentile",
         "%_no_vehicle_households",
-        "percentile",
+        "no_vehicle_percentile",
         "geometry"
     ]]
 
-    print(tract_midday_arrivals)
+    # Tracts with a student_pop_ratio over 50 is considered dominant
+    students = filtered[filtered["student_pop_ratio"]
+                        > 50].reset_index(drop=True)
+    non_students = filtered[filtered["student_pop_ratio"]
+                            <= 50].reset_index(drop=True)
 
+    utils.export_clean(
+        utils.clean_dir("midday_students.geojson")
+    )
+
+    utils.export_clean(
+        utils.clean_dir("midday_non_students.geojson")
+    )
 
 if __name__ == "__main__":
     # berkeley_tracts()

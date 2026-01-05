@@ -181,10 +181,37 @@ def clean_vehicle_ownership():
     )
 
 
+def clean_college_population():
+
+    # Load data
+    df = pd.read_csv(
+        utils.raw_dir("college_population_2026-01-04.csv")
+    )
+
+    # Rename columns
+    df = df.rename(columns={
+        "B14001_008E": "undergrad_pop",
+        "B14001_009E": "grad_pop"
+    })
+
+    # Convert datatypes
+    df = df.astype({"undergrad_pop": "int", "grad_pop": "int"})
+
+    # Select relevant columns
+    df = df[["tract", "undergrad_pop", "grad_pop"]]
+
+    # Export cleaned
+    df.to_csv(
+        utils.clean_dir("college_population.csv"),
+        index=False
+    )
+
+
 if __name__ == "__main__":
     # Clean ingested data
     # clean_ca_tracts()
     # clean_berkeley_boundary()
     # clean_ac_stops()
     # clean_ca_block_population()
-    clean_vehicle_ownership()
+    # clean_vehicle_ownership()
+    clean_college_population()

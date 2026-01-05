@@ -76,6 +76,34 @@ def ingest_vehicle_ownership():
     df.to_csv(utils.raw_dir(f"vehicle_ownership_{today}.csv"))
 
 
+def ingest_college_population():
+    api_key = os.getenv("CENSUS_API_KEY")
+    c = Census(api_key)
+
+    # Berkeley tracts from output of transformation / exploration
+    berkeley_tracts = ['982100', '422902', '422901', '421100', '421400', '421700',
+                       '421800', '421900', '423700', '423800', '423901', '424001',
+                       '422500', '422700', '423000', '423100', '424002', '423300',
+                       '423400', '423500', '423602', '422000', '421200', '422800',
+                       '421300', '423200', '423902', '421500', '421600', '423601',
+                       '422100', '422200', '422300', '422400']
+
+    df = pd.DataFrame(
+        c.acs5.state_county_tract(
+            fields=[
+                "B14001_008E",  # population enrolled in college (undergrad)
+                "B14001_009E"  # population enrolled in college (grad)
+            ],
+            state_fips="06",
+            county_fips="001",
+            tract=",".join(berkeley_tracts),
+            year=2020
+        )
+    )
+
+    df.to_csv(utils.raw_dir(f"college_population_{today}.csv"))
+
+
 if __name__ == "__main__":
 
     # Create directories
@@ -87,4 +115,5 @@ if __name__ == "__main__":
 
     # Ingest data
     # ingest_schedule()
-    ingest_vehicle_ownership()
+    # ingest_vehicle_ownership()
+    ingest_college_population()
