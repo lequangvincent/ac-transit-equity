@@ -1,4 +1,5 @@
 import geopandas as gpd
+import pandas as pd
 import utils
 
 
@@ -118,7 +119,7 @@ def clean_ac_stops():
 
 def clean_ca_block_population():
 
-    # Load Data
+    # Load data
     gdf = gpd.read_file(
         utils.raw_dir("tl_2020_06_tabblock20.zip")
     )
@@ -153,9 +154,37 @@ def clean_ca_block_population():
     utils.export_clean(gdf, "ca_block_population.geojson")
 
 
+def clean_vehicle_ownership():
+
+    # Load data
+    df = pd.read_csv(
+        utils.raw_dir("vehicle_ownership_2026-01-04.csv")
+    )
+
+    # Rename columns
+    df = df.rename(columns={
+        "B08201_001E": "households",
+        "B08201_002E": "zero_vehicle_households"
+    })
+
+    # Convert datatypes
+    df[["households", "zero_vehicle_households"]] = df[[
+        "households", "zero_vehicle_households"]].astype("int")
+
+    # Select relevant columns
+    df = df[["tract", "households", "zero_vehicle_households"]]
+
+    # Export cleaned
+    df.to_csv(
+        utils.clean_dir("vehicle_ownership.csv"),
+        index=False
+    )
+
+
 if __name__ == "__main__":
     # Clean ingested data
-    clean_ca_tracts()
-    clean_berkeley_boundary()
-    clean_ac_stops()
-    clean_ca_block_population()
+    # clean_ca_tracts()
+    # clean_berkeley_boundary()
+    # clean_ac_stops()
+    # clean_ca_block_population()
+    clean_vehicle_ownership()

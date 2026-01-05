@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  </head>
+  <body>
+    <div class="lg:w-[65vw] md:w-[85vw] mx-auto sm:text-lg">
+      <div class="h-[35vh]">
+        <img
+          src="img/484051094_1229043338823434_1782714403560553012_n.jpg"
+          class="object-cover h-full w-full"
+          alt=""
+        />
+      </div>
+      <div class="p-4 md:p-0">
+        <div>
+          <h1 class="sm:text-5xl text-3xl font-bold mt-4">
+            Patterns of Transit Accessibility in Berkeley
+          </h1>
+          <h2 class="sm:text-2xl text-xl mt-4">
+            An analysis on how transit accessibility in Berkeley varies across
+            space and time.
+          </h2>
+          <div class="sm:text-xl text-lg mt-4">
+            <a
+              href="https://lequangvincent.github.io/"
+              class="mt-4 hover:font-semibold text-[#4287f5]"
+              target="_blank"
+              >Vincent Lequang</a
+            >
+          </div>
+          <div class="mt-4 text-lg sm:text-xl">
+            <a
+              href="https://lequangvincent.github.io/"
+              class="mt-4 hover:font-semibold text-[#4287f5]"
+              target="_blank"
+              >Source Code</a
+            >
+          </div>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold mt-12">Introduction</h2>
+          <p class="mt-4">
+            The City of Berkeley is home to over 120,000 residents 1 , including
+            families and students, spread across 10.5 square miles 2 . With
+            roughly 12,000 residents per square mile, Berkeley is among the most
+            densely populated cities in California.
+          </p>
+          <p class="mt-4">
+            In such environments, uneven transit access can create meaningful
+            constraints on daily mobility particularly if areas with lower
+            service availability coincide with households that are less likely
+            to own a car. Understanding whether transit accessibility is
+            distributed consistently across space and time is therefore
+            important for evaluating how well the transit system aligns with
+            underlying mobility needs.
+          </p>
+          <p class="mt-4">
+            This raises an important question: within Berkeley, how does spatial
+            transit accessibility—defined as coverage within a 6-minute (500 m)
+            walk of an AC Transit stop—and temporal transit
+            accessibility—defined as weekday scheduled bus arrivals per 1,000
+            residents by time block—relate to 2020 vehicle ownership patterns
+            across census tracts?
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold mt-4">Data Description</h2>
+          <p class="mt-4">
+            Population data is measured at the census block level, while vehicle
+            ownership data is available at the census tract level. Spatial
+            boundary files define the study area and support alignment across
+            census geographies. Transit data include both bus stop locations and
+            scheduled weekday service by stop, representing planned service
+            availability.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold mt-4">Data Preperation</h2>
+          <p class="mt-4">
+            Minor data cleaning was performed to ensure consistency across
+            datasets. All spatial layers were projected to a common coordinate
+            reference system and filtered to Berkeley census tracts. No
+            imputation was required for missing census attributes.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold mt-4">Methods</h2>
+          <p class="mt-4">
+            The analysis is restricted to the Berkeley land boundary to exclude
+            non-residential areas without population, pedestrian networks, or
+            bus stops. Census tracts, census blocks, and bus stops were filtered
+            to this boundary.
+          </p>
+          <p class="mt-4">
+            Walking access is defined as a 6-minute (approximately 500 m)
+            network-based walk from a bus stop. 3 Isochrones for each stop were
+            generated using an OSMnx pedestrian network of Berkeley and unioned
+            into a single polygon representing walkable access. Population
+            coverage was measured at the census block level using area-weighted
+            intersection with the walk access polygon. Walking access was
+            visualized using an interactive map, where individual layers can be
+            toggled on and off.
+          </p>
+          <p class="mt-4">
+            Transit access is defined as scheduled AC Transit bus arrivals.
+            Hourly weekday schedules were obtained by querying the AC Transit
+            API for all unique bus routes, then aggregated into time blocks and
+            assigned to census tracts based on stop location. Bus arrivals were
+            then normalized by the population covered within each tract. Transit
+            access was visualized using a spatiotemporal choropleth map and box
+            plots to summarize variation in transit accessibility across census
+            tracts and time periods.
+          </p>
+          <p class="mt-4">
+            Building on these visualizations, box plots were used to examine the
+            distribution of transit accessibility across time blocks and to
+            identify periods with greater variability for focused analysis.
+            Census tracts were then classified based on whether their
+            accessibility values fell in the bottom 25% (low-access) or top 75%
+            (high-access) citywide within the selected time block. These groups
+            were compared to assess differences of zero-vehicle households
+            across levels of transit access as part of equity analysis
+          </p>
+          <p>
+            Equity is defined as how evenly transit access is distributed across
+            residents and evaluated by comparing zero-vehicle household shares
+            between lower-access (bottom 25%) and higher-access (top 75%) census
+            tracts within each time block.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold mt-4">Results</h2>
+          <p class="mt-4">
+            Approximately 115,890 residents (93.2%) of Berkeley’s population
+            live within a 6-minute walk of at least one AC Transit bus stop,
+            indicating near-universal spatial coverage. However, a small share
+            of residents remains outside walkable transit catchments.
+          </p>
+          <p class="mt-4">
+            Citywide weekday scheduled arrivals per 1,000 residents vary
+            substantially by time of day and peaking during the midday period,
+            even when restricting the analysis to residents within walking
+            distance of a bus stop.
+          </p>
+          <p class="mt-4">
+            Two census tracts corresponding to the Berkeley Marina and the UC
+            Berkeley campus were excluded from choropleth visualizations due to
+            very low residential populations that inflate per-capita values.
+            These tracts are dominated by non-residential land uses and are not
+            comparable to surrounding neighborhoods.
+          </p>
+          <p class="mt-4">
+            Although median bus arrivals are highest during midday, the
+            interquartile range and whiskers are widest during this period,
+            suggesting greater spatial unevenness despite higher overall service
+            levels, motivating further analysis. Census tracts were classified
+            based on whether their midday accessibility fell in the bottom 25%
+            or top 75% percentiles. Comparisons of zero-vehicle household shares
+            across these groups show similar medians and substantial overlap.
+            After excluding a campus-adjacent outlier tract dominated by the
+            student population, differences between groups are minimal.
+          </p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold mt-4">Limitations</h2>
+          <p class="mt-4">
+            Our analysis, while informative, contains limitations. For example,
+            we measure scheduled transit accessibility rather than real-time
+            reliability, delays, or service disruptions. Furthermore, walking
+            access thresholds do not account for differences in mobility,
+            pedestrian conditions, or terrain. Tracts that have very small
+            residential populations relative to transit service levels inflated
+            transit access values driven by small denominators. These tracts
+            were excluded from some visualizations to avoid misleading
+            comparisons. While the 2020 Census may reflect pandemic-related
+            distortions, we used it to locate residential populations relative
+            to infrastructure rather than to model travel behavior or transit
+            demand. Overall, while there are factors that may obscure how
+            transit accessibility is experienced in practice, the analysis
+            provides a structured view of spatial and temporal transit
+            accessibility.
+          </p>
+        </div>
+        <div class="mb-12">
+          <h2 class="text-2xl font-bold mt-4">Conclusion</h2>
+          <p class="mt-4">
+            Within Berkeley, where most residents live within walking distance
+            of transit (93.2%), variation in scheduled bus service frequency
+            does not show a strong relationship with vehicle ownership at the
+            census tract level. This result does not imply that transit
+            frequency has no effect on travel behavior, but rather that
+            tract-level differences in frequency are not associated with
+            differences in car ownership. From a policy perspective, this
+            suggests that service frequency alone may be an incomplete indicator
+            of transit equity, at least during the midday period when frequency
+            and spatial variance was observed to be highest.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

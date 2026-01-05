@@ -4,3 +4,4 @@
 data
 src/pipeline/__pycache__
 src/pipeline/cache
+src/notebooks/.ipynb_checkpoints

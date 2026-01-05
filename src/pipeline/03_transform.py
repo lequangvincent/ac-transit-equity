@@ -371,9 +371,83 @@ def scheduled_arrivals():
                        "tract_time_block_arrivals.geojson")
 
 
+def tract_midday_arrivals():
+
+    # Load bus arrivals per tract by time block
+    tract_time_block_arrivals = gpd.read_file(
+        utils.clean_dir("tract_time_block_arrivals.geojson")
+    )
+
+    # Convert data types
+    tract_time_block_arrivals[["time_block", "tract"]] = tract_time_block_arrivals[["time_block", "tract"]].astype(
+        "string")
+    tract_time_block_arrivals["arrivals_per_1000_covered"] = tract_time_block_arrivals["arrivals_per_1000_covered"].astype(
+        "float")
+
+    # Filter for Midday arrivals
+    tract_midday_arrivals = tract_time_block_arrivals[
+        tract_time_block_arrivals["time_block"] == "Midday (10–14:59)"]
+
+    # Filter by bottom 25% or top 75%
+    q25 = tract_midday_arrivals["arrivals_per_1000_covered"].quantile(0.25)
+    tract_midday_arrivals["access_group"] = (
+        tract_midday_arrivals["arrivals_per_1000_covered"]
+        .le(q25)
+        .map({True: "Bottom 25%", False: "Top 75%"})
+    )
+
+    # Compute coverage ratio
+    tract_midday_arrivals["coverage_ratio"] = tract_midday_arrivals["population_covered"] / \
+        tract_midday_arrivals["population"] * 100
+
+    # Merge household % no vehicle households to tracts
+    vehicle_ownership = pd.read_csv(
+        utils.clean_dir("vehicle_ownership.csv")
+    )
+    vehicle_ownership["zero_vehicle_households"] = vehicle_ownership["zero_vehicle_households"].astype(
+        "float")
+    vehicle_ownership["households"] = vehicle_ownership["households"].astype(
+        "int")
+    vehicle_ownership["tract"] = vehicle_ownership["tract"].astype("string")
+    vehicle_ownership["%_no_vehicle_households"] = vehicle_ownership["zero_vehicle_households"] / \
+        vehicle_ownership["households"] * 100
+    tract_midday_arrivals = tract_midday_arrivals.merge(
+        vehicle_ownership, on="tract")
+
+    # Sort by arrivals_per_1000_covered
+    tract_midday_arrivals = tract_midday_arrivals.sort_values(
+        "arrivals_per_1000_covered", ascending=False).reset_index(drop=True)
+
+    # Filter by bottom 25% or top 75%
+    q75 = tract_midday_arrivals["%_no_vehicle_households"].quantile(
+        0.75)
+    tract_midday_arrivals["percentile"] = (
+        tract_midday_arrivals["%_no_vehicle_households"]
+        .le(q75)
+        .map({False: "Bottom 25%", True: "Top 75%"})
+    )
+
+    # Reorder columns
+    tract_midday_arrivals = tract_midday_arrivals[[
+        "tract",
+        "population",
+        "population_covered",
+        "coverage_ratio",
+        "arrivals",
+        "arrivals_per_1000_covered",
+        "access_group",
+        "%_no_vehicle_households",
+        "percentile",
+        "geometry"
+    ]]
+
+    print(tract_midday_arrivals)
+
+
 if __name__ == "__main__":
     # berkeley_tracts()
     # berkeley_stops()
     # coverage()
     # tract_population_covered()
-    scheduled_arrivals()
+    # scheduled_arrivals()
+    tract_midday_arrivals()
