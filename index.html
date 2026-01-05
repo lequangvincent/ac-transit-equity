@@ -9,11 +9,7 @@
   <body>
     <div class="lg:w-[65vw] md:w-[85vw] mx-auto sm:text-lg">
       <div class="h-[35vh]">
-        <img
-          src="img/484051094_1229043338823434_1782714403560553012_n.jpg"
-          class="object-cover h-full w-full"
-          alt=""
-        />
+        <img src="img/hero1.jpg" class="object-cover h-full w-full" alt="" />
       </div>
       <div class="p-4 md:p-0">
         <div>
@@ -35,9 +31,24 @@
           <div class="mt-4 text-lg sm:text-xl">
             <a
               href="https://lequangvincent.github.io/"
-              class="mt-4 hover:font-semibold text-[#4287f5]"
+              class="hover:font-semibold text-[#4287f5]"
               target="_blank"
               >Source Code</a
+            >
+          </div>
+          <div class="sm:text-xl text-lg mt-4">
+            <span class="font-bold">[UPDATE]</span>
+            <span class="bold"
+              >As of 1/5/26 this page is under active revision. The current
+              content may be inaccurate as the methodology and source code are
+              being fully rewritten. Please refer to an earlier completed
+              writeup
+              <a
+                href="https://storymaps.arcgis.com/stories/4ea5d5a711d44ad0a18c4aafb442b9b0"
+                class="hover:font-semibold text-[#4287f5]"
+                target="_blank"
+                >here</a
+              >, thanks!</span
             >
           </div>
         </div>
@@ -105,7 +116,7 @@
             visualized using an interactive map, where individual layers can be
             toggled on and off.
           </p>
-          <div class="w-full aspect-video">
+          <div class="w-full aspect-video mt-4">
             <iframe
               class="w-full h-full"
               src="src/visualizations/berkeley_6min_walk_access_bus_stops.html"
@@ -121,20 +132,33 @@
             plots to summarize variation in transit accessibility across census
             tracts and time periods.
           </p>
+          <!-- <div class="md:w-[70%] w-full aspect-square mx-auto mt-4">
+            <iframe
+              class="w-full h-full"
+              src="src/visualizations/transit_access.html"
+            ></iframe>
+          </div>
+          <div class="w-full mx-auto mt-4">
+            <img
+              src="src/visualizations/tract_arrivals.png"
+              class="h-full w-full"
+              alt=""
+            />
+          </div> -->
           <p class="mt-4">
             Building on these visualizations, box plots were used to examine the
             distribution of transit accessibility across time blocks and to
             identify periods with greater variability for focused analysis.
             Census tracts were then classified based on whether their
-            accessibility values fell in the bottom 25% (low-access) or top 75%
+            accessibility values fell in the bottom 25% (low-access) or top 25%
             (high-access) citywide within the selected time block. These groups
             were compared to assess differences of zero-vehicle households
-            across levels of transit access as part of equity analysis
+            across levels of transit access as part of equity analysis.
           </p>
-          <p>
+          <p class="mt-4">
             Equity is defined as how evenly transit access is distributed across
             residents and evaluated by comparing zero-vehicle household shares
-            between lower-access (bottom 25%) and higher-access (top 75%) census
+            between lower-access (bottom 25%) and higher-access (top 25%) census
             tracts within each time block.
           </p>
         </div>
